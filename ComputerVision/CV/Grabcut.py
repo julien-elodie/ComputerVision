@@ -17,13 +17,16 @@ from cv2 import imwrite
 from cv2 import grabCut
 from cv2 import GC_INIT_WITH_RECT
 from cv2 import GC_INIT_WITH_MASK
-
+from cv2 import resize
+from cv2 import INTER_CUBIC
 from cv2 import bitwise_and
 from cv2 import destroyAllWindows
 
 
 class Grabcut(object):
     def __init__(self):
+        self.OUTPUT = False
+
         self.BLUE = [255, 0, 0]        # rectangle color
         self.RED = [0, 0, 255]         # PR BG
         self.GREEN = [0, 255, 0]       # PR FG
@@ -97,6 +100,9 @@ class Grabcut(object):
 
     def process(self, imgpath):
         self.img = imread(imgpath)
+        # resize image
+        w, h, _ = self.img.shape
+        self.img = resize(self.img,(400, int(400/h*w)),interpolation=INTER_CUBIC)
         # a copy of original image
         self.copy = self.img.copy()
         # mask initialized to PR_BG
@@ -152,11 +158,10 @@ class Grabcut(object):
                 # output image to be shown
                 self.output = np.zeros(self.img.shape, np.uint8)
             elif k == ord('n'):  # segment the image
-                import pdb; pdb.set_trace()
                 print(""" For finer touchups, mark foreground and background after pressing keys 0-3
                     and again press 'n' \n""")
                 if (self.rect_or_mask == 0): 
-                    import pdb; pdb.set_trace()        # grabcut with rect
+                    # grabcut with rect
                     bgdmodel = np.zeros((1, 65), np.float64)
                     fgdmodel = np.zeros((1, 65), np.float64)
                     grabCut(self.copy, self.mask, self.rect,
@@ -168,11 +173,14 @@ class Grabcut(object):
                     grabCut(self.copy, self.mask, self.rect,
                             bgdmodel, fgdmodel, 5, GC_INIT_WITH_MASK)
             elif k == ord('o'):  # output image
-                return self.output
-                print(" Output the processed image \n")
+                self.OUTPUT = True
+                break
 
             self.fgMask = np.where(
                 (self.mask == 0) | (self.mask == 2), 0, 255).astype('uint8')
             self.output = bitwise_and(self.copy, self.copy, mask=self.fgMask)
 
         destroyAllWindows()
+        if self.OUTPUT:
+            print(" Output the processed image \n")
+            return self.output
